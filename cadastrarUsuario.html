@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cadastro de Usuário</title>
+    <link rel="stylesheet" href="shared-styles.css">
+</head>
+<body>
+    <div class="card" style="max-width: 500px; margin: 50px auto;">
+        <h1>Cadastro de Usuário</h1>
+        <form id="userForm" class="form-group">
+            <div class="form-group">
+                <label for="nome">Nome Completo:</label>
+                <input type="text" id="nome" name="nome" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="email">E-mail:</label>
+                <input type="email" id="email" name="email" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="telefone">Telefone:</label>
+                <input type="tel" id="telefone" name="telefone" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="cidade">Cidade:</label>
+                <input type="text" id="cidade" name="cidade" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="senha">Senha:</label>
+                <input type="password" id="senha" name="senha" required>
+            </div>
+            
+            <button type="submit" class="btn">Cadastrar</button>
+        </form>
+        
+        <div id="response-message"></div>
+        
+        <div class="cta-cadastro">
+            <a href="loginUsuario.html" style="text-decoration: none; color: #00689d">Já tem uma conta? Faça login</a>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('userForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            cadastrarUsuario();
+        });
+
+        function cadastrarUsuario() {
+            const userData = {
+                nome: document.getElementById('nome').value,
+                email: document.getElementById('email').value,
+                telefone: document.getElementById('telefone').value,
+                cidade: document.getElementById('cidade').value,
+                senha: document.getElementById('senha').value
+            };
+
+            fetch('http://localhost:8080/usuarios', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(userData)
+            })
+            .then(response => {
+                if (response.ok) {
+                    showMessage('Usuário cadastrado com sucesso!', 'success');
+                    limparCampos();
+                    
+                    // Redirecionar para a página de login após 2 segundos
+                    setTimeout(() => {
+                        window.location.href = "loginUsuario.html";
+                    }, 2000);
+                } else {
+                    return response.text().then(text => {
+                        showMessage('Erro ao cadastrar usuário: ' + text, 'error');
+                    });
+                }
+            })
+            .catch(error => {
+                showMessage('Erro de rede: ' + error.message, 'error');
+                console.error('Erro:', error);
+            });
+        }
+
+        function limparCampos() {
+            document.getElementById('userForm').reset();
+        }
+
+        function showMessage(msg, type) {
+            const messageDiv = document.getElementById('response-message');
+            messageDiv.innerText = msg;
+            messageDiv.style.color = type === 'success' ? 'green' : 'red';
+            messageDiv.style.padding = '10px';
+            messageDiv.style.marginTop = '15px';
+            messageDiv.style.backgroundColor = type === 'success' ? '#d4edda' : '#f8d7da';
+            messageDiv.style.borderRadius = '4px';
+        }
+    </script>
+</body>
+</html>

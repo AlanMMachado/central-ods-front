@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Todos os eventos</title>
+  <link rel="stylesheet" href="shared-styles.css">
+</head>
+<body>
+  <div class="card">
+    <h1>Todos os eventos</h1>
+
+    <input type="text" id="searchInput" placeholder="Pesquisar por localização..." class="search-box" />
+
+    <div id="eventosContainer" class="eventos-container"></div>
+  </div>
+
+  <script src="sidebar.js"></script>
+  <script>
+    async function carregarEventos() {
+      try {
+        const response = await fetch("http://localhost:8080/eventos");
+        let eventos = await response.json();
+
+        eventos.sort((a, b) => b.inscritos.length - a.inscritos.length);
+
+        exibirEventos(eventos);
+
+        const searchInput = document.getElementById("searchInput");
+        searchInput.addEventListener("input", () => {
+          const termo = searchInput.value.toLowerCase();
+          const filtrados = eventos.filter(ev =>
+            ev.localizacao.toLowerCase().includes(termo)
+          );
+          exibirEventos(filtrados);
+        });
+      } catch (error) {
+        console.error("Erro ao carregar eventos:", error);
+      }
+    }
+
+    function exibirEventos(eventos) {
+      const container = document.getElementById("eventosContainer");
+      container.innerHTML = "";
+
+      if (eventos.length === 0) {
+        container.innerHTML = "<p>Nenhum evento encontrado.</p>";
+        return;
+      }
+
+       eventos.forEach(ev => {
+        const card = document.createElement("div");
+
+        const odsPrincipal = (ev.ods && ev.ods.length > 0) ? ev.ods[0].id : null;
+        const odsClass = odsPrincipal ? `ods-${odsPrincipal}` : "";
+
+        card.className = `evento borda-ods ${odsClass}`;
+        card.innerHTML = `
+          <h2>${ev.titulo}</h2>
+          <p><strong>Descrição:</strong> ${ev.descricao}</p>
+          <p><strong>Localização:</strong> ${ev.localizacao}</p>
+          <p><strong>Data:</strong> ${new Date(ev.data).toLocaleDateString()}</p>
+          <p><strong>Inscritos:</strong> ${ev.inscritos.length}</p>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    carregarEventos();
+  </script>
+</body>
+</html>

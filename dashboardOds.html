@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard de Eventos por ODS</title>
+    <link rel="stylesheet" href="shared-styles.css">
+</head>
+<body>
+    <div class="card">
+        <h1>Procure os eventos de acordo com a ODS</h1>
+        <div class="ods-grid" id="ods-buttons">
+            <!-- Botões ODS serão gerados via JavaScript -->
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="eventos-container" id="eventos">
+            <p>Selecione uma ODS para visualizar os eventos.</p>
+        </div>
+    </div>
+
+    <script src="sidebar.js"></script>
+    <script>
+    // Dados das ODS com títulos
+    const odsData = [
+        { id: 1, title: "Erradicação da Pobreza" },
+        { id: 2, title: "Fome Zero" },
+        { id: 3, title: "Saúde e Bem-Estar" },
+        { id: 4, title: "Educação de Qualidade" },
+        { id: 5, title: "Igualdade de Gênero" },
+        { id: 6, title: "Água Potável" },
+        { id: 7, title: "Energia Limpa" },
+        { id: 8, title: "Trabalho Decente" },
+        { id: 9, title: "Indústria e Inovação" },
+        { id: 10, title: "Redução das Desigualdades" },
+        { id: 11, title: "Cidades Sustentáveis" },
+        { id: 12, title: "Consumo Responsável" },
+        { id: 13, title: "Ação Contra o Clima" },
+        { id: 14, title: "Vida na Água" },
+        { id: 15, title: "Vida Terrestre" },
+        { id: 16, title: "Paz e Justiça" },
+        { id: 17, title: "Parcerias para os Objetivos" }
+    ];
+
+    // Gerar botões ODS com imagens reais
+document.addEventListener('DOMContentLoaded', function() {
+    const odsButtonsContainer = document.getElementById('ods-buttons');
+    
+    odsData.forEach(ods => {
+        const button = document.createElement('button');
+        button.className = `ods-button ods-${ods.id}`;
+        button.onclick = () => filtrarPorOds(ods.id);
+
+        // Usar imagem real ao invés de placeholder
+        const img = document.createElement('img');
+        img.src = `imagens/ods${ods.id}.png`; // Caminho para sua imagem local
+        img.alt = `ODS ${ods.id}`;
+        img.width = 60;
+        img.height = 60;
+
+        const span = document.createElement('span');
+        span.textContent = ods.title;
+
+        button.appendChild(img);
+        button.appendChild(span);
+        odsButtonsContainer.appendChild(button);
+    });
+});
+
+    const usuario = localStorage.getItem('usuarioLogado');
+
+    if (!usuario) {
+        alert('Nenhum usuário logado encontrado no localStorage.');
+        throw new Error("Usuário não logado.");
+    }
+
+    const usuarioObj = JSON.parse(usuario);
+    const usuarioId = usuarioObj.id;
+
+    function filtrarPorOds(idOds) {
+        fetch(`http://localhost:8080/eventos/por-ods/${idOds}`)
+            .then(res => res.json())
+            .then(eventos => {
+                const container = document.getElementById("eventos");
+                container.innerHTML = "";
+
+                if (eventos.length === 0) {
+                    container.innerHTML = "<p>Nenhum evento encontrado.</p>";
+                    return;
+                }
+
+                eventos.forEach(evento => {
+                    const div = document.createElement("div");
+                    div.className = "evento";
+
+                    div.innerHTML = `
+                        <h2>${evento.titulo}</h2>
+                        <p><strong>Descrição:</strong> ${evento.descricao}</p>
+                        <p><strong>Localização:</strong> ${evento.localizacao}</p>
+                        <p><strong>Data:</strong> ${new Date(evento.data).toLocaleDateString()}</p>
+                        <p><strong>Host:</strong> ${evento.usuarioHost.nome} (${evento.usuarioHost.email})</p>
+                        <p id="qtd-inscritos-${evento.id}"><em>Carregando inscritos...</em></p>
+                    `;
+
+                    const botaoInscrever = document.createElement("button");
+                    botaoInscrever.textContent = "Inscrever-se";
+                    botaoInscrever.className = "btn-inscrever";
+                    botaoInscrever.onclick = () => inscreverUsuarioNoEvento(evento.id, usuarioId, evento.titulo);
+
+                    div.appendChild(botaoInscrever);
+                    container.appendChild(div);
+
+                    // Chamada para buscar a quantidade de inscritos
+                    fetch(`http://localhost:8080/eventos/${evento.id}/quantidade-inscritos`)
+                        .then(res => res.text())
+                        .then(qtd => {
+                            document.getElementById(`qtd-inscritos-${evento.id}`).textContent = `Inscritos: ${qtd}`;
+                        })
+                        .catch(err => {
+                            document.getElementById(`qtd-inscritos-${evento.id}`).textContent = "Erro ao carregar inscritos.";
+                            console.error(err);
+                        });
+                });
+            })
+            .catch(err => {
+                document.getElementById("eventos").innerHTML = "<p>Erro ao carregar os eventos.</p>";
+                console.error(err);
+            });
+    }
+
+    function inscreverUsuarioNoEvento(eventoId, usuarioId, tituloEvento) {
+        console.log(usuarioId);
+        console.log(eventoId);
+
+        fetch(`http://localhost:8080/eventos/${eventoId}/inscrever/${usuarioId}`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({})
+        })
+        .then(res => {
+            if (res.ok) {
+                alert(`Inscrição realizada com sucesso no evento: ${tituloEvento}`);
+                location.reload();
+            } else {
+                alert("Erro ao se inscrever no evento.");
+            }
+        })
+        .catch(err => {
+            alert("Erro de conexão.");
+            console.error(err);
+        });
+    }
+    </script>
+</body>
+</html>

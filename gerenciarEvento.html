@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Gerenciar Evento</title>
+  <link rel="stylesheet" href="shared-styles.css">
+</head>
+<body>
+  <div class="card">
+    <h1>Gerenciar Evento</h1>
+
+    <form id="eventoForm" class="form-group">
+      <input type="hidden" id="eventoId" name="eventoId">
+      
+      <div class="form-group">
+        <label>Título:</label>
+        <input type="text" id="titulo" name="titulo" required>
+      </div>
+
+      <div class="form-group">
+        <label>Descrição:</label>
+        <textarea id="descricao" name="descricao" required></textarea>
+      </div>
+
+      <div class="form-group">
+        <label>Localização:</label>
+        <input type="text" id="localizacao" name="localizacao" required>
+      </div>
+
+      <!-- Campo de data comentado no original -->
+      <!--
+      <div class="form-group">
+        <label>Data:</label>
+        <input type="date" id="data" name="data" required>
+      </div>
+      -->
+
+      <div class="form-group">
+        <label>ODS relacionados:</label>
+        <div id="odsBox" class="ods-box" style="background-color: #f0f0f0; padding: 8px; border-radius: 4px;"></div>
+      </div>
+
+      <div style="display: flex; gap: 10px;">
+        <button type="submit" class="btn">Salvar Alterações</button>
+        <button type="button" class="btn" style="background-color: var(--ods-1);" onclick="excluirEvento()">Excluir Evento</button>
+      </div>
+    </form>
+  </div>
+
+  <script src="sidebar.js"></script>
+  <script>
+    function carregarEvento() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const eventoId = urlParams.get('id');
+      
+      if (!eventoId) {
+        alert('ID do evento não fornecido na URL.');
+        return;
+      }
+
+      fetch(`http://localhost:8080/eventos/${eventoId}`)
+        .then(response => {
+          if (!response.ok) throw new Error("Erro ao carregar evento.");
+          return response.json();
+        })
+        .then(evento => {
+          document.getElementById('eventoId').value = evento.id;
+          document.getElementById('titulo').value = evento.titulo;
+          document.getElementById('descricao').value = evento.descricao;
+          document.getElementById('localizacao').value = evento.localizacao;
+          if (document.getElementById('data')) {
+            document.getElementById('data').value = evento.data;
+          }
+          const odsBox = document.getElementById('odsBox');
+          odsBox.textContent = (evento.ods || []).map(o => o.id).join(', ');
+        })
+        .catch(error => {
+          alert("Erro ao carregar dados do evento.");
+          console.error(error);
+        });
+    }
+
+    function atualizarEvento(e) {
+      e.preventDefault();
+      
+      const usuario = localStorage.getItem('usuarioLogado');
+      if (!usuario) {
+        alert('Nenhum usuário logado encontrado no localStorage.');
+        return;
+      }
+
+      const usuarioObj = JSON.parse(usuario);
+      const hostId = usuarioObj.id;
+      const eventoId = document.getElementById('eventoId').value;
+
+      if (!eventoId) {
+        alert('ID do evento não encontrado.');
+        return;
+      }
+
+      const form = e.target;
+      const titulo = form.titulo.value;
+      const descricao = form.descricao.value;
+      const localizacao = form.localizacao.value;
+      const dataInput = document.getElementById('data');
+      const data = dataInput ? dataInput.value : null;
+
+      const payload = {
+        titulo,
+        descricao,
+        localizacao,
+        ...(data && { data })
+      };
+
+      fetch(`http://localhost:8080/eventos/${eventoId}?hostId=${hostId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      })
+      .then(response => {
+        if (!response.ok) throw new Error("Erro ao atualizar o evento.");
+        return response.json();
+      })
+      .then(data => {
+        alert("Evento atualizado com sucesso!");
+        console.log(data);
+      })
+      .catch(error => {
+        alert("Ocorreu um erro ao atualizar o evento.");
+        console.error(error);
+      });
+    }
+
+    function excluirEvento() {
+      const eventoId = document.getElementById('eventoId').value;
+      const usuario = localStorage.getItem('usuarioLogado');
+      if (!usuario) {
+        alert('Nenhum usuário logado encontrado.');
+        return;
+      }
+
+      const usuarioObj = JSON.parse(usuario);
+      const hostId = usuarioObj.id;
+
+      if (!eventoId || !hostId) {
+        alert('Informações insuficientes para exclusão.');
+        return;
+      }
+
+      const confirmacao = confirm("Tem certeza de que deseja excluir este evento?");
+      if (!confirmacao) return;
+
+      fetch(`http://localhost:8080/eventos/${eventoId}?hostId=${hostId}`, {
+        method: 'DELETE'
+      })
+      .then(response => {
+        if (!response.ok) throw new Error("Erro ao excluir evento.");
+        alert("Evento excluído com sucesso!");
+        window.location.href = "homepage.html"; // redireciona após exclusão
+      })
+      .catch(error => {
+        alert("Erro ao excluir evento.");
+        console.error(error);
+      });
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      const form = document.getElementById('eventoForm');
+      if (form) {
+        form.addEventListener('submit', atualizarEvento);
+        carregarEvento();
+      }
+    });
+  </script>
+</body>
+</html>

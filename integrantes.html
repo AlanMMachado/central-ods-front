@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Integrantes da Equipe</title>
+    <link rel="stylesheet" href="shared-styles.css">
+</head>
+<body>
+    <div class="card">
+        <div class="card-header">
+            <h1>Integrantes da Equipe</h1>
+            <p>Conheça os membros responsáveis pelo desenvolvimento desta plataforma</p>
+        </div>
+
+        <div class="integrantes-grid" id="integrantesGrid">
+            <!-- Os cards serão gerados via JavaScript -->
+        </div>
+    </div>
+
+    <script src="sidebar.js"></script>
+    <script>
+        // Dados dos integrantes
+        const integrantes = [
+            {
+                id: 'alan',
+                nome: 'Alan Marques',
+                foto: 'imagens/alan.jpeg'
+            },
+            {
+                id: 'arthur',
+                nome: 'Arthur Luna',
+                foto: 'imagens/arthur.jpg'
+            },
+            {
+                id: 'carlos',
+                nome: 'Carlos Gustavo',
+                foto: 'imagens/carlos.jpeg'
+            },
+            {
+                id: 'kenzo',
+                nome: 'Kenzo Osaki',
+                foto: 'imagens/kenzo.png'
+            },
+            {
+                id: 'marlom',
+                nome: 'Marlom Kaik',
+                foto: 'imagens/marlom.png'
+            },
+            {
+                id: 'nathan',
+                nome: 'Nathan Lucas',
+                foto: 'imagens/nathan.jpeg'
+            }
+        ];
+
+        // Função para criar card do integrante
+        function criarCardIntegrante(integrante) {
+            const card = document.createElement('div');
+            card.className = 'integrante-card';
+            card.innerHTML = `
+                <div class="integrante-foto">
+                    <img src="${integrante.foto}" alt="${integrante.nome}" onerror="this.style.display='none'; this.parentNode.innerHTML='👤';">
+                </div>
+                <div class="integrante-nome">${integrante.nome}</div>
+            `;
+            
+            return card;
+        }
+
+        // Função para renderizar todos os cards
+        function renderizarIntegrantes() {
+            const grid = document.getElementById('integrantesGrid');
+            grid.innerHTML = '';
+            
+            integrantes.forEach(integrante => {
+                const card = criarCardIntegrante(integrante);
+                grid.appendChild(card);
+            });
+        }
+
+        // Inicializar a página
+        document.addEventListener('DOMContentLoaded', () => {
+            renderizarIntegrantes();
+        });
+    </script>
+</body>
+</html>

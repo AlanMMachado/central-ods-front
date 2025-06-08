@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Perfil do Usuário</title>
+    <link rel="stylesheet" href="shared-styles.css">
+</head>
+<body>
+    <div class="card">
+        <h1>Perfil do Usuário</h1>
+        <div class="usuario-info" id="usuario-info">
+            <p>Carregando informações do usuário...</p>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>Eventos Cadastrados</h2>
+        <div id="eventos-usuario"></div>
+    </div>
+
+    <script src="sidebar.js"></script>
+    <script>
+        const usuario = localStorage.getItem('usuarioLogado');
+
+        if (!usuario) {
+            alert("Usuário não está logado.");
+            window.location.href = "loginUsuario.html";
+        }
+
+        const usuarioObj = JSON.parse(usuario);
+        const usuarioId = usuarioObj.id;
+
+        // Função para cancelar inscrição
+        function cancelarInscricao(eventoId, tituloEvento) {
+            const confirmacao = confirm(`Tem certeza de que deseja cancelar sua inscrição no evento "${tituloEvento}"?`);
+            if (!confirmacao) return;
+
+            fetch(`http://localhost:8080/eventos/${eventoId}/inscricao/${usuarioId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Erro ao cancelar inscrição');
+                }
+                alert(`Inscrição cancelada com sucesso no evento: ${tituloEvento}`);
+                location.reload();
+            })
+            .catch(error => {
+                console.error('Erro ao cancelar inscrição:', error);
+                alert('Erro ao cancelar inscrição. Por favor, tente novamente.');
+            });
+        }
+
+        // Requisição de dados do usuário
+        fetch(`http://localhost:8080/usuarios/${usuarioId}`)
+            .then(res => res.json())
+            .then(data => {
+                const infoDiv = document.getElementById("usuario-info");
+                infoDiv.innerHTML = `
+                    <p><strong>Nome:</strong> ${data.nome}</p>
+                    <p><strong>Email:</strong> ${data.email}</p>
+                    <p><strong>Telefone:</strong> ${data.telefone}</p>
+                    <p><strong>Cidade:</strong> ${data.cidade}</p>
+                `;
+
+                infoDiv.innerHTML += `
+                    <button id="editar-perfil-btn" class="btn" style="margin-top: 10px;">Editar Perfil</button>
+                `;
+                document.getElementById("editar-perfil-btn").addEventListener("click", () => {
+                    window.location.href = "editarPerfil.html";
+                });
+
+                const eventosDiv = document.getElementById("eventos-usuario");
+
+                // Eventos em que está inscrito
+                let html = `<h3>Eventos Cadastrados</h3>`;
+                if (data.eventos && data.eventos.length > 0) {
+                    data.eventos.forEach(evento => {
+                        html += `
+                            <div class="evento">
+                                <p><strong>Título:</strong> ${evento.titulo}</p>
+                                <p><strong>Localização:</strong> ${evento.localizacao}</p>
+                                <p><strong>Data:</strong> ${new Date(evento.data).toLocaleDateString()}</p>
+                                <div class="evento-buttons">
+                                    <button class="cancelar-inscricao-btn btn btn-danger" data-id="${evento.id}" data-titulo="${evento.titulo}" style="margin-top: 5px;">Cancelar Inscrição</button>
+                                </div>
+                            </div>
+                        `;
+                    });
+                } else {
+                    html += "<p>Nenhum evento cadastrado.</p>";
+                }
+
+                // Busca todos os eventos para filtrar os criados pelo usuário
+                fetch("http://localhost:8080/eventos")
+                    .then(res => res.json())
+                    .then(eventos => {
+                        html += `<h3>Eventos Criados</h3>`;
+                        const eventosCriados = eventos.filter(ev => ev.usuarioHost && ev.usuarioHost.id === usuarioId);
+                        
+                        if (eventosCriados.length > 0) {
+                            eventosCriados.forEach(evento => {
+                                html += `
+                                <div class="evento">
+                                    <p><strong>Título:</strong> ${evento.titulo}</p>
+                                    <p><strong>Localização:</strong> ${evento.localizacao}</p>
+                                    <p><strong>Data:</strong> ${new Date(evento.data).toLocaleDateString()}</p>
+                                    <div class="evento-buttons">
+                                        <button class="editar-evento-btn btn" data-id="${evento.id}" style="margin-top: 5px;">Editar</button>
+                                        <button class="ver-inscritos-btn btn btn-secondary" data-id="${evento.id}" style="margin-top: 5px;">Ver Inscritos</button>
+                                    </div>
+                                </div>
+                                `;
+                            });
+
+                            setTimeout(() => {
+                                document.querySelectorAll(".editar-evento-btn").forEach(btn => {
+                                    btn.addEventListener("click", (e) => {
+                                        const eventoId = e.target.getAttribute("data-id");
+                                        window.location.href = `gerenciarEvento.html?id=${eventoId}`;
+                                    });
+                                });
+
+                                document.querySelectorAll(".ver-inscritos-btn").forEach(btn => {
+                                    btn.addEventListener("click", (e) => {
+                                        const eventoId = e.target.getAttribute("data-id");
+                                        window.location.href = `inscritos.html?id=${eventoId}`;
+                                    });
+                                });
+                            }, 0);
+
+                        } else {
+                            html += "<p>Nenhum evento criado.</p>";
+                        }
+
+                        eventosDiv.innerHTML = html;
+
+                        setTimeout(() => {
+                            document.querySelectorAll(".cancelar-inscricao-btn").forEach(btn => {
+                                btn.addEventListener("click", (e) => {
+                                    const eventoId = e.target.getAttribute("data-id");
+                                    const tituloEvento = e.target.getAttribute("data-titulo");
+                                    cancelarInscricao(eventoId, tituloEvento);
+                                });
+                            });
+                        }, 0);
+                    })
+                    .catch(err => {
+                        console.error("Erro ao carregar eventos criados:", err);
+                        html += "<p>Erro ao carregar eventos criados.</p>";
+                        eventosDiv.innerHTML = html;
+                    });
+            })
+            .catch(err => {
+                console.error(err);
+                document.getElementById("usuario-info").innerHTML = "<p>Erro ao carregar perfil.</p>";
+            });
+    </script>
+</body>
+</html>

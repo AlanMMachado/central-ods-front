@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inscritos no Evento</title>
+    <link rel="stylesheet" href="shared-styles.css">
+</head>
+<body>
+    <div class="card">
+        <div class="inscritos-header">
+            <button onclick="history.back()" class="btn btn-back">← Voltar</button>
+            <h1 id="evento-titulo">Carregando...</h1>
+            <p id="evento-info">Carregando informações do evento...</p>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="inscritos-stats">
+            <div class="stat-item">
+                <span class="stat-number" id="total-inscritos">0</span>
+                <span class="stat-label">Total de Inscritos</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>Lista de Inscritos</h2>
+        <div class="search-container">
+            <input type="text" id="searchInput" placeholder="Pesquisar por nome ou email..." class="search-box">
+        </div>
+        <div id="inscritos-container" class="inscritos-container">
+            <p class="loading">Carregando inscritos...</p>
+        </div>
+    </div>
+
+    <script src="sidebar.js"></script>
+    <script>
+        let todosInscritos = [];
+        let eventoInfo = {};
+
+        // Verificar se o usuário está logado
+        const usuario = localStorage.getItem('usuarioLogado');
+        if (!usuario) {
+            alert("Usuário não está logado.");
+            window.location.href = "loginUsuario.html";
+        }
+
+        // Obter ID do evento da URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const eventoId = urlParams.get('id');
+
+        if (!eventoId) {
+            alert('ID do evento não fornecido na URL.');
+            window.location.href = "perfilUsuario.html";
+        }
+
+        // Função para carregar informações do evento
+        async function carregarInfoEvento() {
+            try {
+                const response = await fetch(`http://localhost:8080/eventos/${eventoId}`);
+                if (!response.ok) {
+                    throw new Error('Erro ao carregar informações do evento');
+                }
+                
+                eventoInfo = await response.json();
+                
+                document.getElementById('evento-titulo').textContent = eventoInfo.titulo;
+                document.getElementById('evento-info').innerHTML = `
+                    <strong>Localização:</strong> ${eventoInfo.localizacao} | 
+                    <strong>Data:</strong> ${new Date(eventoInfo.data).toLocaleDateString()}
+                `;
+            } catch (error) {
+                console.error('Erro ao carregar informações do evento:', error);
+                document.getElementById('evento-titulo').textContent = 'Erro ao carregar evento';
+                document.getElementById('evento-info').textContent = 'Não foi possível carregar as informações do evento.';
+            }
+        }
+
+        // Função para carregar inscritos
+        async function carregarInscritos() {
+            try {
+                const response = await fetch(`http://localhost:8080/eventos/${eventoId}/inscritos`);
+                if (!response.ok) {
+                    throw new Error('Erro ao carregar inscritos');
+                }
+                
+                todosInscritos = await response.json();
+                
+                document.getElementById('total-inscritos').textContent = todosInscritos.length;
+                
+                exibirInscritos(todosInscritos);
+                
+                // Configurar busca
+                const searchInput = document.getElementById('searchInput');
+                searchInput.addEventListener('input', () => {
+                    const termo = searchInput.value.toLowerCase();
+                    const inscritosFiltrados = todosInscritos.filter(inscrito =>
+                        inscrito.nome.toLowerCase().includes(termo) ||
+                        inscrito.email.toLowerCase().includes(termo)
+                    );
+                    exibirInscritos(inscritosFiltrados);
+                });
+                
+            } catch (error) {
+                console.error('Erro ao carregar inscritos:', error);
+                document.getElementById('inscritos-container').innerHTML = 
+                    '<p class="error">Erro ao carregar a lista de inscritos.</p>';
+            }
+        }
+
+        // Função para exibir inscritos
+        function exibirInscritos(inscritos) {
+            const container = document.getElementById('inscritos-container');
+            
+            if (inscritos.length === 0) {
+                container.innerHTML = '<p class="no-results">Nenhum inscrito encontrado.</p>';
+                return;
+            }
+            
+            container.innerHTML = '';
+            
+            inscritos.forEach(inscrito => {
+                const inscritoCard = document.createElement('div');
+                inscritoCard.className = 'inscrito-card';
+                
+                inscritoCard.innerHTML = `
+                    <div class="inscrito-avatar">
+                        <span>${inscrito.nome.charAt(0).toUpperCase()}</span>
+                    </div>
+                    <div class="inscrito-info">
+                        <h3>${inscrito.nome}</h3>
+                        <p class="inscrito-email">${inscrito.email}</p>
+                        <p class="inscrito-detalhes">
+                        </p>
+                    </div>
+                `;
+                
+                container.appendChild(inscritoCard);
+            });
+        }
+
+        // Inicializar página
+        document.addEventListener('DOMContentLoaded', () => {
+            carregarInfoEvento();
+            carregarInscritos();
+        });
+    </script>
+</body>
+</html>

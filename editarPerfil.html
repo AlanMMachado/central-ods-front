@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Editar Perfil</title>
+    <link rel="stylesheet" href="shared-styles.css">
+</head>
+<body>
+    <div class="card">
+        <h1>Editar Perfil</h1>
+        
+        <form id="editarPerfilForm" class="form-group">
+            <div class="form-group">
+                <label for="nome">Nome:</label>
+                <input type="text" id="nome" name="nome" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="email">Email:</label>
+                <input type="email" id="email" name="email" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="telefone">Telefone:</label>
+                <input type="tel" id="telefone" name="telefone" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="cidade">Cidade:</label>
+                <input type="text" id="cidade" name="cidade" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="senha">Nova Senha (deixe em branco para manter a atual):</label>
+                <input type="password" id="senha" name="senha">
+            </div>
+            
+            <div class="buttons">
+                <button type="submit" class="btn">Salvar Alterações</button>
+                <button type="button" class="btn" style="background-color: var(--neutral-500);" onclick="window.location.href='perfilUsuario.html'">Cancelar</button>
+            </div>
+        </form>
+        
+        <div id="message" class="message" style="display: none;"></div>
+    </div>
+
+    <script src="sidebar.js"></script>
+    <script>
+        // Verificar se o usuário está logado
+        const usuario = localStorage.getItem('usuarioLogado');
+
+        if (!usuario) {
+            alert("Usuário não está logado.");
+            window.location.href = "login.html";
+        }
+
+        const usuarioObj = JSON.parse(usuario);
+        const usuarioId = usuarioObj.id;
+        
+        // Função para carregar os dados do usuário
+        function carregarDadosUsuario() {
+            fetch(`http://localhost:8080/usuarios/${usuarioId}`)
+                .then(res => {
+                    if (!res.ok) {
+                        throw new Error("Erro ao carregar dados do usuário");
+                    }
+                    return res.json();
+                })
+                .then(data => {
+                    // Preencher os campos do formulário com os dados do usuário
+                    document.getElementById("nome").value = data.nome;
+                    document.getElementById("email").value = data.email;
+                    document.getElementById("telefone").value = data.telefone;
+                    document.getElementById("cidade").value = data.cidade;
+                    // Não preenchemos a senha por segurança
+                })
+                .catch(err => {
+                    console.error(err);
+                    mostrarMensagem("Erro ao carregar dados do perfil.", "error");
+                });
+        }
+        
+        // Função para atualizar o perfil do usuário
+        function atualizarPerfil(e) {
+            e.preventDefault();
+            
+            const nome = document.getElementById("nome").value;
+            const email = document.getElementById("email").value;
+            const telefone = document.getElementById("telefone").value;
+            const cidade = document.getElementById("cidade").value;
+            const senha = document.getElementById("senha").value;
+            
+            // Criar objeto com os dados atualizados
+            const dadosAtualizados = {
+                nome,
+                email,
+                telefone,
+                cidade
+            };
+            
+            // Adicionar senha apenas se foi preenchida
+            if (senha.trim() !== "") {
+                dadosAtualizados.senha = senha;
+            }
+            
+            // Enviar requisição para atualizar o perfil
+            fetch(`http://localhost:8080/usuarios/${usuarioId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(dadosAtualizados)
+            })
+            .then(res => {
+                if (!res.ok) {
+                    throw new Error("Erro ao atualizar perfil");
+                }
+                return res.json();
+            })
+            .then(data => {
+                // Atualizar os dados no localStorage
+                const usuarioAtualizado = {
+                    ...usuarioObj,
+                    nome: data.nome,
+                    email: data.email,
+                    telefone: data.telefone,
+                    cidade: data.cidade
+                };
+                
+                localStorage.setItem('usuarioLogado', JSON.stringify(usuarioAtualizado));
+                
+                mostrarMensagem("Perfil atualizado com sucesso!", "success");
+                
+                // Redirecionar para a página de perfil após 2 segundos
+                setTimeout(() => {
+                    window.location.href = "perfilUsuario.html";
+                }, 2000);
+            })
+            .catch(err => {
+                console.error(err);
+                mostrarMensagem("Erro ao atualizar perfil. Por favor, tente novamente.", "error");
+            });
+        }
+        
+        // Função para mostrar mensagens
+        function mostrarMensagem(texto, tipo) {
+            const messageDiv = document.getElementById("message");
+            messageDiv.textContent = texto;
+            messageDiv.className = `message ${tipo}`;
+            messageDiv.style.display = "block";
+        }
+        
+        // Carregar dados do usuário quando a página carregar
+        document.addEventListener("DOMContentLoaded", () => {
+            carregarDadosUsuario();
+            
+            // Adicionar evento de submit ao formulário
+            document.getElementById("editarPerfilForm").addEventListener("submit", atualizarPerfil);
+        });
+    </script>
+</body>
+</html>
